@@ -1,0 +1,51 @@
+---
+title: "Mayur Vihar Listing HFC"
+author: "Mihir Bhaskar"
+date: "11/07/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+if (!require("pacman")) install.packages("pacman") # Pacman package has easy load functions (e.g. installs package and then loads if not available)
+pacman::p_load(tidyverse, here, stringr, knitr, rgdal, leaflet, RColorBrewer)
+
+# Load data
+setwd(here())
+source('listing_cleaning.R')
+
+```
+
+
+## Productivity
+
+```{r productivity}
+
+prod = table(raw$surveyor_code, raw$survey_date)
+addmargins(prod)
+
+# Refusals and other survey status questions
+
+```
+
+## Errors
+
+```{r errors}
+
+# Entering non-alphabetical name (either Aadhaar number or Hindi typing)
+
+# Not including the respondent in the roster
+
+# Not understanding the relation to respondent question (-87 instead of swayam)
+
+# Very long survey durations, very short survey durations
+raw %>% filter(duration < 180 | duration > 900) %>% arrange(desc(duration)) %>% View()
+
+# Start time beyond working hours 
+
+# Don't knows in respondent relation and in 
+
+
+```
+
