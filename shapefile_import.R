@@ -9,7 +9,7 @@ if (!require("pacman")) install.packages("pacman") # Pacman package has easy loa
 pacman::p_load(tidyverse, sp, leaflet, rgdal, maptools, tmap, stringr)
 
 # Reading in Google Maps KML
-boundaries <- readOGR("C:/Users/Mihir_Bhaskar/Downloads/Blocks Mayur vihar.kml")
+boundaries <- readOGR("D:/Dropbox/Mayur Vihar Project/Listing Survey/Data/Raw/Blocks for listing.kml")
 
 # Prepping and merging on survey data
 
