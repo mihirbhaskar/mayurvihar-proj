@@ -21,9 +21,9 @@ set mem 100m
 local overwrite_old_data 0
 
 * initialize form-specific parameters
-local csvfile "D:/Dropbox/Mayur Vihar Project/Listing Survey/Data/Raw/listing_v1_WIDE.csv"
-local dtafile "D:/Dropbox/Mayur Vihar Project/Listing Survey/Data/Processed/listing_v1.dta"
-local corrfile "D:/Dropbox/Mayur Vihar Project/Listing Survey/Data/Raw/listing_v1_corrections.csv"
+local csvfile "$listingraw/listing_v1_WIDE.csv"
+local dtafile "$listingprocess/listing_v1.dta"
+local corrfile "$listingraw/listing_v1_corrections.csv"
 local note_fields1 ""
 local text_fields1 "deviceid subscriberid simid devicephonenum username duration caseid block resp_name resp_father_husband_name phone_num alt_phone_num hh_roster_count mem_id_* name_* age_years_dob_* aadhaar_num_*"
 local text_fields2 "ration_card_num_* voter_id_* edu_level_oth_* comments instanceid"

@@ -6,36 +6,26 @@
 
 Input files: 
 	- listing_v1_WIDE.dta, created by running the auto-generated SurveyCTO
-      cleaning template file (import_listing_v1) on the raw .csv data
+      cleaning template file (1_listing_import) on the raw .csv data
 
 Output files: 
+	- Clean Listing dataset (listing_clean.dta)
+	- Prefill for mosquito net distribution in E block 
+	- Prefill for mosquito net distribution in the rest of the blocks (full prefill)
+
 
 */
 
-* Set-up and import
+* Import
 ***************************************************
-clear
-set more off
-set mem 100m
-
-*Mihir
-	if "`c(username)'" == "Mihir_Bhaskar"{
-		gl userdb "D:/Dropbox" // location of the user's Dropbox
-	}
-
-*Sohaib
-	if "`c(username)'" == "Sohaib Nasim"{
-		gl userdb "C:/Users/" // location of the user's Dropbox
-	}
-
-
-gl root "$userdb/Mayur Vihar Project"
-gl data "$root/Listing Survey/Data/Processed"
-
-use "$data/listing_v1.dta", clear
+use "$listingprocess/listing_v1.dta", clear
 
 * Cleaning
 *****************************************************
+
+* Drop unnecessary variables
+drop deviceid-username
+drop caseid hh_roster_count mem_id* formdef_vers*
 
 * Create household unique ID
 sort block key
@@ -53,6 +43,8 @@ forval i=0/5{
 replace phone_num="" if substr(phone_num, 1, 1) == "`i'"
 }  
 
+* Flag duplicate phone numbers, duplicate Aadhaar or duplicate ration cards
+
 * Collapse the two age variables for each member into one, generate
 * flag for if household has kid < 5 years
 foreach var of varlist age_years_dob*{
@@ -66,8 +58,10 @@ forvalues i=1/10{
 	gen age_`i' = .
 	replace age_`i' = age_years_dob_`i' if age_years_dob_`i' != .
 	replace age_`i' = age_years_`i' if age_years_`i' != .
-	
 	replace under_5 = 1 if age_`i' <= 5 & age_`i' != .
+	
+	drop age_years_dob_`i' age_years_`i'
+	
 }
 
 
@@ -85,7 +79,7 @@ forvalues i=1/10{
 
 * Merge split households into one
 
-export delimited using "$data/listing_clean.csv", replace
+save "$listingprocess/listing_clean", replace
 
 * Mosqutio Net Distribution prefills
 ******************************************************
@@ -95,7 +89,7 @@ export delimited using "$data/listing_clean.csv", replace
 export delimited hhid resp_name resp_father_husband_name phone_num ///
              hh_size name_1 aadhaar_num_1 ration_card_num_1 ///
 			 name_2 aadhaar_num_2 ration_card_num_2 ///
-			 if block == "E" using "$root/Mosquito Net Distribution/Beneficiary Prefills/Eblock_prefill.csv", replace
+			 if block == "E" using "$netsprefill/Eblock_prefill.csv", replace
 
 
 * For rest of the blocks
@@ -118,14 +112,17 @@ gen all_names = name_1
 forvalues i=2/10 {
 replace all_names = all_names + ", " + name_`i' if !missing(name_`i')
 }
-drop name_1-name_10
+
+forvalues i = 1/10{
+	drop name_`i'
+}
 
 
 //Saving variables that don't have to be reshaped
 preserve 
 keep hhid key under_5 resp_name phone_num all_names
 tempfile static
-save `static'
+save `static', replace
 restore
 
 
@@ -142,7 +139,7 @@ replace all_aadhaar = all_aadhaar + ", " + aadhaar_num_[_n+`i'] if hhid[_n+`i'] 
 rename aadhaar_num_ aadhaar_num_1
 keep hhid key all_names all_aadhaar aadhaar_num_1
 tempfile aadhaar
-save `aadhaar'
+save `aadhaar', replace
 restore
 
 
@@ -161,7 +158,7 @@ duplicates drop hhid, force
 rename ration_card_num_ rationcard_num_1
 keep hhid key all_names rationcard_num_1
 tempfile ration
-save `ration'
+save `ration', replace
 restore
 
 
@@ -181,7 +178,7 @@ drop srno
 order hhid phone_num resp_name aadhaar_num_1 rationcard_num_1 under_5 all_names all_aadhaar key
 sort hhid aadhaar_num_1
 duplicates drop _all, force
-export delimited "$root/Mosquito Net Distribution/Beneficiary Prefills/full_prefill.csv", replace
+export delimited "$netsprefill/full_prefill.csv", replace
 
 
 
