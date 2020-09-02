@@ -79,6 +79,9 @@ forvalues i=1/10{
 
 * Merge split households into one
 
+* Rename variables
+rename (hh_locationlatitude hh_locationlongitude hh_locationaltitude hh_locationaccuracy) (latitude longitude altitude location_accuracy)
+
 save "$listingprocess/listing_clean", replace
 
 * Mosqutio Net Distribution prefills

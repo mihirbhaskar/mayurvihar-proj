@@ -41,4 +41,4 @@ do "$usergit/3_nets_import.do"
 
 do "$usergit/4_nets_cleaning.do"
 
-*do "$usergit/final_merge_clean.do"
+do "$usergit/final_merge_clean.do"

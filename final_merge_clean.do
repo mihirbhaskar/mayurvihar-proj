@@ -29,4 +29,19 @@ replace has_aadhaar_1 = 1 if aadhaar_num_1 != ""
 
 
 *Export merged data for use in R
-export delimited using "$root/full_master_data.csv", replace
+export delimited using "$root/full_master_hh_data.csv", replace
+
+*Creating an individual-level listing for use in R
+unab vars : *_1
+local stubs : subinstr local vars "1" "", all
+
+// Dropping the people that don't have hhids - from the mosquito net distribution
+drop if hhid == ""
+
+reshape long `stubs', i(hhid)
+
+rename *_ *
+
+drop if name == ""
+
+export delimited using "$root/full_master_ind_data.csv", replace

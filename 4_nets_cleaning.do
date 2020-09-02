@@ -172,6 +172,8 @@ export excel date hhid resp_block name_ phone_ aadhaar_ rationcard_ ///
 export excel date hhid resp_block name_ phone_ aadhaar_ rationcard_ ///
 			 using "$netsprocess/full_list.xlsx", firstrow(var) replace
 			 			 
+						 e
+						 
 **************************************************
 * Appending on one-off E Block distribution data
 ***************************************************
@@ -191,7 +193,7 @@ restore
 append using `eblock'
 replace date = d(31jul2020) if missing(date)
 
-			 
+		e	 
 *************************************************************
 * Saving clean mosquito net data for merge with listing data
 *************************************************************

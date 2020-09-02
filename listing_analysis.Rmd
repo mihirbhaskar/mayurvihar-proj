@@ -15,11 +15,10 @@ pacman::p_load(tidyverse, here, stringr, rgdal, leaflet, RColorBrewer)
 if (Sys.info()[["user"]] == "Mihir_Bhaskar") dbpath <- "D:/"
 if (Sys.info()[["user"]] == "Sohaib Nasim") dbpath <- "C:/Users/Sohaib/"
 
-base <- paste0(dbpath,"Dropbox/Mayur Vihar Project/Listing Survey/")
-raw <- paste0(base,"Data/Raw/")
+base <- paste0(dbpath,"Dropbox/Mayur Vihar Project/")
 
-# Import raw survey data 
-raw <- read.csv(paste0(raw,'listing_v1_WIDE.csv'))
+# Import cleaned master data
+listing <- as.data.frame(read.csv(paste0(raw,'full_master_data.csv')))
 
 # Create simple tab function
 tab <- function(x, y){
@@ -35,38 +34,16 @@ tab <- function(x, y){
 
 ```
 
-## R Markdown
-
+## Demographics
 
 ```{r basic}
-
-# Block-level summary table 
-
-for (i in 1:10)
-
-raw %>% mutate(has_young_kid = )
-  
-  group_by(block) %>% summarise(tot_hh = n(), 
-                                      need_net = sum(has_mosquito_net == 0),
-                                      )
-
 
 # Number of people per block
 tab(raw, block) %>% kable(format.args = list(big.mark = ","), digits = 2, caption = "Number of households per block") %>%
   kable_styling('striped')
 
-# Number of households needing mosquitos per block
-need_mosquito <- raw %>% filter(has_mosquito_net == 0)
-tab(need_mosquito, block) %>% kable(caption = "Number of households needing mosquito per block") 
+# HH Lat-longs shown on map
+
 
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
