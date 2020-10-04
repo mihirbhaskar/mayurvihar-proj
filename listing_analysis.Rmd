@@ -6,10 +6,16 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(message = FALSE)
 
-if (!require("pacman")) install.packages("pacman") # Pacman package has easy load functions (e.g. installs package and then loads if not available)
-pacman::p_load(tidyverse, here, stringr, rgdal, leaflet, RColorBrewer)
+# Clear workspace
+rm(list = ls())
+
+pacman::p_load(tidyverse, sp, leaflet, rgdal, maptools, tmap, stringr, ggthemes, knitr,
+               ggmap)
 
 # set up paths relative to User's Dropbox
 if (Sys.info()[["user"]] == "Mihir_Bhaskar") dbpath <- "D:/"
@@ -17,10 +23,49 @@ if (Sys.info()[["user"]] == "Sohaib Nasim") dbpath <- "C:/Users/Sohaib/"
 
 base <- paste0(dbpath,"Dropbox/Mayur Vihar Project/")
 
-# Import cleaned master data
-listing <- as.data.frame(read.csv(paste0(raw,'full_master_data.csv')))
+# Import listing hh data
+hh <- as.data.frame(read.csv('D:/Dropbox/Mayur Vihar Project/full_master_hh_data.csv')) 
 
-# Create simple tab function
+# Import listing individual data
+ind <- as.data.frame(read.csv('D:/Dropbox/Mayur Vihar Project/full_master_ind_data.csv')) 
+
+# Import boundary shapefile, drawn using Google Maps and exported as .kml
+boundaries <- readOGR("D:/Dropbox/Mayur Vihar Project/Listing Survey/Data/Raw/Blocks for listing.kml",
+                      require_geomType='wkbPolygon')
+
+# Dropping cases without HHID (basically cases that were found in the net distribution but didn't match)
+hh <- hh[hh$hhid != "",]
+
+# Creating / cleaning up categories for analysis
+
+
+## Age
+ind$age_group <- cut(ind$age, breaks = c(0,5,18,30,45,65,150), right = FALSE,
+                     labels = c('Under 5','5-17 years', '18-29 years', '30-44 years', 
+                                '45-64 years', '65 and above'))
+
+
+## Length of stay
+hh$length_of_stay <- factor(hh$length_of_stay, levels = 
+                              c("","Keep coming and going","0 to 1 year","1 to 5 years",
+                                "5 to 10 years","10 to 20 years","20 years or more"))
+
+ind$length_of_stay <- factor(ind$length_of_stay, levels = 
+                              c("","Keep coming and going","0 to 1 year","1 to 5 years",
+                                "5 to 10 years","10 to 20 years","20 years or more"))
+
+
+## Education
+
+### Creating education category
+ind$edu_group <- cut(ind$edu_level, c(-100,-87,4,9,11,12,15,18),
+                     labels = c('Did not know or respond','Below primary/no formal education',
+                                'Completed primary','10th pass','12th pass','Completed degree/diploma','Others'), right = TRUE) 
+
+ind$edu_group[ind$edu_level == 16] <- 'Below primary/no formal education' # Anganwadi/nursery school reclassifying
+ind$edu_group[ind$edu_level == 17] <- 'Below primary/no formal education' # Home schooled kids
+
+# Creating easy table function for displaying using kable
 tab <- function(x, y){
   
   y <- enquo(y)
@@ -39,11 +84,204 @@ tab <- function(x, y){
 ```{r basic}
 
 # Number of people per block
-tab(raw, block) %>% kable(format.args = list(big.mark = ","), digits = 2, caption = "Number of households per block") %>%
-  kable_styling('striped')
+tab(hh, block) %>% kable(format.args = list(big.mark = ","), digits = 2, caption = "Number of households per block") 
 
-# HH Lat-longs shown on map
+# Creating map showing HH distribution of points
+
+## Merging blockwise population onto the shapefiles
+
+blocklevel <- as.data.frame(table(hh$block))
+
+colnames(blocklevel)[1] <- "block"
+colnames(boundaries@data)[1] <- "block"
+
+boundaries@data <- merge(boundaries@data, blocklevel, by = 'block') 
+
+## Creating leaflet plot with layers 
+
+leaflet(hh[hh$location_accuracy <= 20,]) %>% addTiles %>% #addProviderTiles("Esri.WorldImagery") %>% 
+  addPolygons(data = boundaries, color = 'black', weight = 1, highlightOptions = highlightOptions(color = "white", weight = 2, bringToFront = TRUE),
+          popup = paste0('Block ',boundaries@data$block,': ',boundaries@data$Freq,' households')) %>%
+  addCircles(~longitude, ~latitude, radius = 1, color = 'black')
+  
+
+
+# Household size distribution
+hhsize_mean <- mean(hh$hh_size, na.rm = TRUE) %>% round(digits = 1)
+hhsize_sd <- sd(hh$hh_size, na.rm = TRUE) %>% round(digits = 1)
+
+ggplot(hh, aes(x = hh_size)) + 
+  geom_bar(fill = 'tomato', color = 'firebrick4', alpha = 0.3) + 
+  geom_vline(xintercept = hhsize_mean, size = 0.5) + 
+  scale_x_discrete("Number of members in the household", breaks=1:10)+
+  theme_tufte()+
+  ggtitle("Distribution of household size", subtitle = paste("Mean =",hhsize_mean,"members | St. dev =",hhsize_sd))
+
+# Gender distribution
+tab(ind, gender) %>% filter(gender != "") %>% kable(caption = "Gender distribution")
+
+# Individual age distribution
+age_mean <- mean(ind$age, na.rm = TRUE) %>% round(digits = 1)
+age_sd <- sd(ind$age, na.rm = TRUE) %>% round(digits = 1)
+
+ind$under_18 <- as.factor(ind[,'age'] < 18)
+levels(ind$under_18) <- c('Under 18 years','Above 18 years')
+
+ggplot(ind, aes(x = age)) + 
+  geom_histogram(aes(y = ..density.., fill = under_18), binwidth = 2) + 
+  geom_density(size = 1, adjust = 5, color = 'firebrick4') + 
+  ggtitle("Distribution of age", subtitle = paste("Mean =",age_mean,"years | St. dev =",age_sd)) 
+
+
+ggplot(subset(ind, gender == 'Male' | gender == 'Female'), aes(x = age)) + 
+  geom_histogram(aes(y = ..density..), binwidth = 2) + 
+  geom_density(size = 1, adjust = 5, color = 'firebrick4') + 
+  facet_wrap(~gender) +
+  ggtitle('Age distribution by gender')
+
+tapply(ind$age, ind$gender, mean)
+
+tab(hh, religion) %>% kable(caption = 'Religious breakup of households')
+
+ggplot(subset(ind, under_18 == 'Above 18 years' & edu_level != -89 & edu_level != -88)) + geom_bar(aes(x = edu_level)) +
+  ggtitle('Over 18 years education distribution')
+
+ggplot(subset(ind, under_18 == 'Above 18 years' & edu_level != -89 & edu_level != -88)) + geom_bar(aes(x = edu_level)) + ggtitle('Over 18 years education distribution') + facet_wrap(~gender)
+
+tmp <- subset(ind, under_18 == 'Under 18 years' & age > 6 & edu_online_status != "")
+
+tab(tmp, edu_online_status) %>% kable(title = 'Online schooling status, kids 6-18 years')
+
+## Does having a sibling going to school improve your chances of going to school? Look at dynamics
+## Between male sibling and female sibling
+
+## Does 
+
 
 
 ```
+
+## Access to services
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+
+tab(hh, length_of_stay) %>% kable(title = 'Length of stay of household')
+
+# See if people are clustering in areas if they've been here longer
+
+# leaflet(hh[hh$location_accuracy <= 20,]) %>% addTiles %>%
+#   addCircles(~longitude, ~latitude, radius = 1, color = ~length_of_stay)
+
+# Phone numbers; HHs sharing the same mobile number
+
+tab(hh,phone_num) %>% select(n) %>% tab(n) %>% kable(caption = 'Mobile numbers by duplicate status')
+
+
+# Verify with map or distance calculation that they are close to each other
+
+
+# Creating tables of access to services
+
+ind <- ind %>% mutate(has_ration_yesno = has_ration %in% c('Yes','Yes but does not want to provide details'),
+               has_aadhaar_yesno = has_aadhaar %in% c('Yes','Yes but does not want to provide details'),
+               has_voterid_yesno = has_voterid %in% c('Yes','Yes but does not want to provide details'),
+               has_bankacc_yesno = has_bank_account %in% c('Yes','Yes but does not want to provide details'))
+
+## Household-level - at least one person having access to these
+hhlevelaccess <- ind %>% group_by(hhid) %>% summarise(hh_has_ration = max(has_ration_yesno),
+                                     hh_has_aadhaar = max(has_aadhaar_yesno),
+                                     hh_has_voterid = max(has_voterid_yesno),
+                                     hh_has_bankacc = max(has_bankacc_yesno))
+
+colMeans(hhlevelaccess[,2:5])
+
+
+# Correlations between these variables (figure out way to show correlation matrix highlighting cells as green etc.)
+cor(hhlevelaccess[,2:5]) %>% round(2) 
+
+## Individual-level
+colMeans(ind %>% select(has_ration_yesno, has_voterid_yesno, has_aadhaar_yesno, has_bankacc_yesno))
+
+cor(ind %>% select(has_ration_yesno, has_voterid_yesno, has_aadhaar_yesno, has_bankacc_yesno)) %>% round(2) 
+
+# Cross-cuts:
+
+# hhtest <- hhlevelaccess
+# 
+# for (i in 2:5){
+#   hhtest[,i] <- factor(hhlevelaccess[,i])
+# }
+
+
+
+hh <- merge(x = hhlevelaccess, y = hh, by = 'hhid')
+
+# Maps showing households
+qmplot(data = hh[hh$location_accuracy < 20,], x = longitude, y = latitude, color = hh_has_ration)
+
+qmplot(data = hh[hh$location_accuracy < 20,], x = longitude, y = latitude, color = hh_has_aadhaar)
+
+qmplot(data = hh[hh$location_accuracy < 20,], x = longitude, y = latitude, color = hh_has_voterid)
+
+qmplot(data = hh[hh$location_accuracy < 20,], x = longitude, y = latitude, color = hh_has_bankacc)
+
+
+
+## Relationship between household length of stay and ration ownership
+## In results file, have this as a stacked bar graph with # HHs under each category, filled as a 
+## progress bar with access
+ggplot(hh) + geom_bar(aes(x = length_of_stay, y = hh_has_ration),
+                                 stat = 'summary', fun.y = 'mean') +
+  ggtitle('Household length of stay vs ration card ownership')
+
+## Relationship between HH length of stay and bank account ownership
+ggplot(hh) + geom_bar(aes(x = length_of_stay, y = hh_has_bankacc),
+                                 stat = 'summary', fun.y = 'mean') +
+  ggtitle('Relationship between HH length of stay and bank account ownership')
+
+## Relationship between Aadhaar ownership and age
+
+ggplot(ind) + geom_bar(aes(x = age_group, y = has_aadhaar_yesno),
+                                 stat = 'summary', fun.y = 'mean') +
+  ggtitle('Relationship between Aadhaar ownership and age')
+
+## Relationship between bank account ownership and age
+ggplot(ind) + geom_bar(aes(x = age_group, y = has_bankacc_yesno),
+                                 stat = 'summary', fun.y = 'mean') +
+  ggtitle('Relationship between bank account ownership and age')
+
+
+## Relationship between household size and access to services (are the people that are cut out single-person households? Or larger families?
+
+
+
+## Relationship between access and gender
+aggregate(ind %>% select(has_ration_yesno, has_voterid_yesno, has_aadhaar_yesno, has_bankacc_yesno),by=list(ind$gender), FUN = mean)
+
+
+
+# See if there's a particular pocket of households that don't have access to Aadhaar or services (completely cut-out) - geography-wise
+
+#ggplot(hh[hh$location_accuracy<20,]) + geom_point(aes(x = latitude.x, y = longitude.x, color = hh_has_aadhaar))
+
+# Relationship between access and education level
+aggregate(ind %>% select(has_ration_yesno, has_voterid_yesno, has_aadhaar_yesno, has_bankacc_yesno),by=list(ind$edu_group), FUN = mean)
+
+
+
+
+
+
+```
+
+- Household-level; ration card, with at least one member having a bank account
+- % with aadhaar, % of hhs with ration, % of adults with bakn accounts, with voter IDs
+(differences in bank account ownership between males and efmales, by age, by length of stay)
+
+- Ration card and access to everything else by length of stay
+- 
+- Do these on a map with the dots to see an clear patterns
+
+Bank account; check if it is correlated with age at all. Check the dynamics; if people co-located close to each other are more likely to have an account
+
 
