@@ -196,6 +196,16 @@ hhlevelaccess <- ind %>% group_by(hhid) %>% summarise(hh_has_ration = max(has_ra
 colMeans(hhlevelaccess[,2:5])
 
 
+###### Export households that don't have ration for Vikram ####
+
+
+hh <- merge(hh, hhlevelaccess, by = "hhid", all.x = TRUE)
+
+forexport <- hh %>% filter(hh_has_ration == 0) %>% select(hhid, phone_num, length_of_stay, hh_size, contains('name'), contains('aadhaar_num'), contains('age'))
+
+writexl::write_xlsx(forexport, path = "C:/Users/Mihir_Bhaskar/Desktop/hh_no_ration.xlsx")
+
+
 # Correlations between these variables (figure out way to show correlation matrix highlighting cells as green etc.)
 cor(hhlevelaccess[,2:5]) %>% round(2) 
 
