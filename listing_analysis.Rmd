@@ -18,20 +18,20 @@ pacman::p_load(tidyverse, sp, leaflet, rgdal, maptools, tmap, stringr, ggthemes,
                ggmap)
 
 # set up paths relative to User's Dropbox
-if (Sys.info()[["user"]] == "Mihir_Bhaskar") dbpath <- "D:/"
+if (Sys.info()[["user"]] == "mihirbhaskar") dbpath <- "/Users/mihirbhaskar/"
 if (Sys.info()[["user"]] == "Sohaib Nasim") dbpath <- "C:/Users/Sohaib/"
 
 base <- paste0(dbpath,"Dropbox/Mayur Vihar Project/")
 
 # Import listing hh data
-hh <- as.data.frame(read.csv('D:/Dropbox/Mayur Vihar Project/full_master_hh_data.csv')) 
+hh <- as.data.frame(read.csv(paste0(base,'full_master_hh_data.csv'))) 
 
 # Import listing individual data
-ind <- as.data.frame(read.csv('D:/Dropbox/Mayur Vihar Project/full_master_ind_data.csv')) 
+ind <- as.data.frame(read.csv(paste0(base,'full_master_ind_data.csv'))) 
 
 # Import boundary shapefile, drawn using Google Maps and exported as .kml
-boundaries <- readOGR("D:/Dropbox/Mayur Vihar Project/Listing Survey/Data/Raw/Blocks for listing.kml",
-                      require_geomType='wkbPolygon')
+# boundaries <- readOGR(paste0(base,"Listing Survey/Data/Raw/Blocks for listing.kml",
+#                       require_geomType='wkbPolygon'))
 
 # Dropping cases without HHID (basically cases that were found in the net distribution but didn't match)
 hh <- hh[hh$hhid != "",]
@@ -75,6 +75,13 @@ tab <- function(x, y){
     mutate(percent = round((n/sum(n)), 3)) %>% arrange(desc(n))
   
 }
+
+
+# Exporting list of kids between 5-16
+temp <- ind %>% select(hhid, block, name, gender, dob, age, aadhaar_num, resp_name, phone_num) %>% filter(age >= 5 & age <= 16)
+temp <- temp %>% rename(parent_name = resp_name)
+
+writexl::write_xlsx(temp, path = paste0(base,"kids_5to16.xlsx"))
 
 
 ```
