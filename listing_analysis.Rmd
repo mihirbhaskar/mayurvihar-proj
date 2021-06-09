@@ -77,11 +77,34 @@ tab <- function(x, y){
 }
 
 
-# Exporting list of kids between 5-16
-temp <- ind %>% select(hhid, block, name, gender, dob, age, aadhaar_num, resp_name, phone_num) %>% filter(age >= 5 & age <= 16)
-temp <- temp %>% rename(parent_name = resp_name)
+# Exporting list of kids for nutrition interventions (6-16)
+kids_6to16 <- ind %>% select(hhid, block, name, gender, dob, age, aadhaar_num, resp_name, phone_num) %>% 
+  mutate(current_age = age + 1) %>% filter(current_age >= 6 & current_age <= 16) %>% group_by(hhid) %>% mutate(tot_kids_in_hh = n(), child_no = 1:n()) %>% ungroup() %>% select(-age) %>% rename(parent_name = resp_name)
 
-writexl::write_xlsx(temp, path = paste0(base,"kids_5to16.xlsx"))
+kids_6to16 <- pivot_wider(kids_6to16, id_cols = c(hhid, block, parent_name, phone_num, tot_kids_in_hh),
+                                   names_from = child_no,
+                                   names_glue = "{.value}_{child_no}",
+                                   values_from = c(name, gender, dob, aadhaar_num, current_age))
+
+kids_6to16 <- select(kids_6to16, hhid, block, parent_name, phone_num, tot_kids_in_hh, contains("_1"), contains("_2"),
+                              contains("_3"), contains("_4"), contains("_5"), contains("_6"), contains("_7"))
+
+writexl::write_xlsx(kids_6to16, path = paste0(base,"kids_6to16.xlsx"))
+
+# Exporting list of kids for nutrition interventions (0-5)
+kids_0to5 <- ind %>% select(hhid, block, name, gender, dob, age, aadhaar_num, resp_name, phone_num) %>% 
+  mutate(current_age = age + 1) %>% filter(current_age <= 5) %>% group_by(hhid) %>% mutate(tot_kids_in_hh = n(), child_no = 1:n()) %>% ungroup() %>% select(-age) %>% rename(parent_name = resp_name)
+
+kids_0to5 <- pivot_wider(kids_0to5, id_cols = c(hhid, block, parent_name, phone_num, tot_kids_in_hh),
+                                   names_from = child_no,
+                                   names_glue = "{.value}_{child_no}",
+                                   values_from = c(name, gender, dob, aadhaar_num, current_age))
+
+kids_0to5 <- select(kids_0to5, hhid, block, parent_name, phone_num, tot_kids_in_hh, contains("_1"), contains("_2"),
+                              contains("_3"), contains("_4"), contains("_5"), contains("_6"), contains("_7"))
+
+writexl::write_xlsx(kids_0to5, path = paste0(base,"kids_0to5.xlsx"))
+
 
 
 ```
