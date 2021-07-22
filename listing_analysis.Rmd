@@ -105,7 +105,21 @@ kids_0to5 <- select(kids_0to5, hhid, block, parent_name, phone_num, tot_kids_in_
 
 writexl::write_xlsx(kids_0to5, path = paste0(base,"kids_0to5.xlsx"))
 
+# Exporting list of mosquito net recipients for feedback
 
+## Randomly sort HHs in the dataset
+hh_copy <- hh
+set.seed(928374)
+rows <- sample(nrow(hh))
+hh_copy <- hh_copy[rows,]
+
+## Filter info for those who received nets
+hh_copy <- hh_copy %>% filter(net_received == "Yes") %>% select(hhid, block, resp_name, phone_num, net_dist_date)
+
+## Export to Excel
+writexl::write_xlsx(hh_copy, path = paste0(base,"net_recipients_feedback_list.xlsx"))
+
+rm(hh_copy)
 
 ```
 
