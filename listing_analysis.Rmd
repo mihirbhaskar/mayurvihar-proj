@@ -15,13 +15,13 @@ knitr::opts_chunk$set(message = FALSE)
 rm(list = ls())
 
 pacman::p_load(tidyverse, sp, leaflet, rgdal, maptools, tmap, stringr, ggthemes, knitr,
-               ggmap)
+               ggmap, writexl)
 
 # set up paths relative to User's Dropbox
 if (Sys.info()[["user"]] == "mihirbhaskar") dbpath <- "/Users/mihirbhaskar/"
 if (Sys.info()[["user"]] == "Sohaib Nasim") dbpath <- "C:/Users/Sohaib/"
 
-base <- paste0(dbpath,"Dropbox/Mayur Vihar Project/")
+base <- 'C:/Users/mihir/Dropbox/Mayur Vihar Project/'
 
 # Import listing hh data
 hh <- as.data.frame(read.csv(paste0(base,'full_master_hh_data.csv'))) 
@@ -104,6 +104,20 @@ kids_0to5 <- select(kids_0to5, hhid, block, parent_name, phone_num, tot_kids_in_
                               contains("_3"), contains("_4"), contains("_5"), contains("_6"), contains("_7"))
 
 writexl::write_xlsx(kids_0to5, path = paste0(base,"kids_0to5.xlsx"))
+
+# Exporting list of kids from 15-18
+kids_15to18 <- ind %>% select(hhid, block, name, gender, dob, age, aadhaar_num, resp_name, phone_num) %>% 
+  mutate(current_age = age + 1) %>% filter(current_age >= 15 & current_age <= 18) %>% group_by(hhid) %>% mutate(tot_kids_in_hh = n(), child_no = 1:n()) %>% ungroup() %>% select(-age) %>% rename(parent_name = resp_name)
+
+kids_15to18 <- pivot_wider(kids_15to18, id_cols = c(hhid, block, parent_name, phone_num, tot_kids_in_hh),
+                                   names_from = child_no,
+                                   names_glue = "{.value}_{child_no}",
+                                   values_from = c(name, gender, dob, aadhaar_num, current_age))
+
+kids_15to18 <- select(kids_15to18, hhid, block, parent_name, phone_num, tot_kids_in_hh, contains("_1"), contains("_2"),
+                              contains("_3"), contains("_4"), contains("_5"), contains("_6"), contains("_7"))
+
+writexl::write_xlsx(kids_15to18, path = paste0(base,"kids_15to18.xlsx"))
 
 # Exporting list of mosquito net recipients for feedback
 
